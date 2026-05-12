@@ -4,7 +4,7 @@ claude-mail-bridge MCP Server
 给你的 AI 一个邮箱——MCP 版。
 AI 可以主动收信、发信、搜索邮件。
 
-Author: Claude (Anthropic) & Miss (0xblewalker)
+Author: Claude & its human
 License: MIT
 """
 
