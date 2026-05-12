@@ -313,25 +313,36 @@ def save_draft(to_addr: str, subject: str, body: str):
         log.error(f"保存草稿失败: {e}")
 
 
-def notify_owner(sender: str, subject: str, reply: str):
-    """Notify owner about pending draft. Supports webhook (ntfy, bark, etc)."""
+def notify_owner(sender: str, subject: str, body: str = "", event: str = "new_mail"):
+    """Notify owner via webhook. Supports ntfy / Bark / pushover etc.
+    event: 'new_mail' | 'draft_saved' | 'auto_sent'
+    """
     webhook = BRIDGE_CFG.get("notify_webhook")
     if not webhook:
-        log.info(f"💡 提示: 设置 notify_webhook 可以收到手机推送")
         return
     try:
-        preview = reply[:200] + ("..." if len(reply) > 200 else "")
-        title = f"📬 {sender} → {subject}"
-        message = f"{preview}\n\n草稿已保存，请去邮箱查看并发送。"
+        tags = {"new_mail": "📨", "draft_saved": "📝", "auto_sent": "✅"}
+        tag = tags.get(event, "📬")
 
-        # ntfy style (also works with bark, pushover etc)
+        if event == "new_mail":
+            title = f"{tag} 收到邮件: {sender}"
+            preview = body[:200] + ("..." if len(body) > 200 else "")
+            message = f"主题: {subject}\n\n{preview}"
+        elif event == "draft_saved":
+            title = f"{tag} 草稿已生成: Re: {subject}"
+            preview = body[:200] + ("..." if len(body) > 200 else "")
+            message = f"回复 {sender} 的草稿已保存，请去邮箱审核后发送。\n\n{preview}"
+        else:  # auto_sent
+            title = f"{tag} 已自动回复: {sender}"
+            message = f"主题: {subject}"
+
         requests.post(
             webhook,
             data=message.encode("utf-8"),
             headers={"Title": title, "Tags": "email"},
             timeout=10,
         )
-        log.info(f"📱 已通知主人")
+        log.info(f"📱 已通知主人 ({event})")
     except Exception as e:
         log.warning(f"通知发送失败: {e}")
 
@@ -368,6 +379,8 @@ def main():
         emails = fetch_unseen()
         for mail in emails:
             log.info(f"📨 收到邮件: {mail['from']} - {mail['subject']}")
+            notify_owner(mail["from"], mail["subject"], mail["body"], "new_mail")
+
             blocked = _check_rate_limit(mail["from_addr"])
             if blocked:
                 log.warning(f"⚠️ 限流: {blocked}，跳过")
@@ -382,9 +395,10 @@ def main():
 
             if auto_send:
                 send_reply(mail["from_addr"], mail["subject"], reply)
+                notify_owner(mail["from"], mail["subject"], reply, "auto_sent")
             else:
                 save_draft(mail["from_addr"], mail["subject"], reply)
-                notify_owner(mail["from"], mail["subject"], reply)
+                notify_owner(mail["from"], mail["subject"], reply, "draft_saved")
         time.sleep(interval)
 
     log.info("👋 bridge 已停止")
