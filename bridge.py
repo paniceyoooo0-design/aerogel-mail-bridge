@@ -152,12 +152,12 @@ def connect_imap():
 
 def fetch_unseen():
     """Fetch all unseen emails, return list of {uid, from, subject, body}."""
+    conn = None
     try:
         conn = connect_imap()
         conn.select("INBOX")
         status, data = conn.uid("search", None, "UNSEEN")
         if status != "OK" or not data[0]:
-            conn.logout()
             return []
 
         uids = data[0].split()
@@ -206,11 +206,16 @@ def fetch_unseen():
             })
             seen_uids.add(uid_str)
 
-        conn.logout()
         return results
     except Exception as e:
         log.error("IMAP 错误: %s", e)
         return []
+    finally:
+        if conn:
+            try:
+                conn.logout()
+            except Exception:
+                pass
 
 
 # ── API Call ───────────────────────────────────────────────────
@@ -314,6 +319,23 @@ def save_draft(to_addr, subject, body):
         log.error("保存草稿失败: %s", e)
 
 
+def mark_as_read(uid):
+    """Mark a processed email as \Seen on the server."""
+    conn = None
+    try:
+        conn = connect_imap()
+        conn.select("INBOX")
+        conn.uid("store", uid.encode() if isinstance(uid, str) else uid, "+FLAGS", "\\Seen")
+    except Exception as e:
+        log.warning("标记已读失败: %s", e)
+    finally:
+        if conn:
+            try:
+                conn.logout()
+            except Exception:
+                pass
+
+
 # ── Notifications ─────────────────────────────────────────────
 
 def notify_owner(sender, subject, body="", event="new_mail"):
@@ -410,6 +432,8 @@ def main():
             else:
                 save_draft(mail["from_addr"], mail["subject"], reply)
                 notify_owner(mail["from"], mail["subject"], reply, "draft_saved")
+
+            mark_as_read(mail["uid"])
 
         time.sleep(interval)
 
