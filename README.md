@@ -87,6 +87,8 @@ python bridge.py
 - `poll_interval`：检查新邮件的间隔（秒）
 - `allowed_senders`：白名单，填邮箱地址，留空 `[]` 表示不限
 - `max_body_chars`：邮件正文最大字符数
+- `daily_limit`：每天最多调用 API 几次（默认 50），防止被刷爆钱包
+- `sender_hourly_limit`：同一个发件人每小时最多几封（默认 5），防骚扰
 
 ---
 

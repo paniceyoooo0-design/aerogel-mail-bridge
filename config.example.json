@@ -12,11 +12,14 @@
     "base_url": "https://api.openai.com/v1",
     "api_key": "sk-xxx",
     "model": "gpt-4o",
+    "max_tokens": 1000,
     "system_prompt": "你是一个友善的AI助手。收到邮件后请用同样的语言回复。"
   },
   "bridge": {
     "poll_interval": 10,
     "max_body_chars": 3000,
+    "daily_limit": 50,
+    "sender_hourly_limit": 5,
     "allowed_senders": [],
     "log_file": "bridge.log"
   }

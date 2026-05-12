@@ -54,10 +54,47 @@ logging.basicConfig(
 )
 log = logging.getLogger("bridge")
 
-# ── Helpers ────────────────────────────────────────────────────
+# ── Rate Limiting ──────────────────────────────────────────────
+
+from collections import defaultdict
 
 seen_uids: set = set()
 running = True
+
+# {sender: [timestamp, timestamp, ...]}
+_sender_history: dict[str, list[float]] = defaultdict(list)
+_daily_count = 0
+_daily_reset: float = 0.0
+
+
+def _check_rate_limit(sender: str) -> str | None:
+    """Returns reason string if blocked, None if OK."""
+    global _daily_count, _daily_reset
+
+    now = time.time()
+    daily_limit = BRIDGE_CFG.get("daily_limit", 50)
+    sender_limit = BRIDGE_CFG.get("sender_hourly_limit", 5)
+
+    # reset daily counter
+    if now - _daily_reset > 86400:
+        _daily_count = 0
+        _daily_reset = now
+
+    if _daily_count >= daily_limit:
+        return f"今日已达 {daily_limit} 次上限"
+
+    cutoff = now - 3600
+    _sender_history[sender] = [t for t in _sender_history[sender] if t > cutoff]
+    if len(_sender_history[sender]) >= sender_limit:
+        return f"{sender} 一小时内已发 {sender_limit} 封"
+
+    return None
+
+
+def _record_call(sender: str):
+    global _daily_count
+    _daily_count += 1
+    _sender_history[sender].append(time.time())
 
 def graceful_exit(sig, frame):
     global running
@@ -277,8 +314,13 @@ def main():
         emails = fetch_unseen()
         for mail in emails:
             log.info(f"📨 收到邮件: {mail['from']} - {mail['subject']}")
+            blocked = _check_rate_limit(mail["from_addr"])
+            if blocked:
+                log.warning(f"⚠️ 限流: {blocked}，跳过")
+                continue
             reply = call_api(mail["from"], mail["subject"], mail["body"])
             if reply:
+                _record_call(mail["from_addr"])
                 send_reply(mail["from_addr"], mail["subject"], reply)
             else:
                 log.warning(f"API 无回复，跳过")
