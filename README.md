@@ -158,6 +158,46 @@ python mcp_server.py
 
 ---
 
+## 各邮箱授权码获取方法
+
+### QQ 邮箱
+
+1. 打开 [QQ 邮箱网页版](https://mail.qq.com)
+2. 设置 → 账户 → 往下翻到「POP3/IMAP/SMTP/Exchange/CardDAV/CalDAV 服务」
+3. 开启 IMAP/SMTP 服务
+4. 按提示用密保手机发短信验证
+5. 获得 16 位授权码，填到 config.json 的 `password` 里
+
+### 163 邮箱
+
+1. 打开 [163 邮箱网页版](https://mail.163.com)
+2. 设置 → POP3/SMTP/IMAP
+3. 开启 IMAP/SMTP 服务
+4. 设置客户端授权密码
+5. 填到 config.json
+
+### iCloud 邮箱
+
+1. 打开 [appleid.apple.com](https://appleid.apple.com)
+2. 登录 → 登录和安全 → App 专用密码
+3. 点加号生成，随便起个名字
+4. 拿到 xxxx-xxxx-xxxx-xxxx 格式的密码，填到 config.json
+
+### Gmail
+
+1. 打开 [Google 账号](https://myaccount.google.com)
+2. 安全性 → 两步验证（必须先开启）
+3. 两步验证页面最下方 → App 专用密码
+4. 选择「邮件」，生成 16 位密码，填到 config.json
+
+### Outlook / Hotmail
+
+1. 打开 [Microsoft 账户安全](https://account.microsoft.com/security)
+2. 高级安全选项 → App 密码
+3. 创建新的 App 密码，填到 config.json
+
+> ⚠️ 以上填的都是**授权码 / App 专用密码**，不是你的登录密码。授权码可以随时撤销，不影响正常登录。
+
 ## 安全建议
 
 - **设置白名单**：`allowed_senders` 填上信任的邮箱地址
