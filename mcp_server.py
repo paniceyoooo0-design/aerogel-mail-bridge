@@ -272,8 +272,13 @@ async def mail_folders() -> str:
 # ── Entry ──────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    import os
     import sys
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8877
     import uvicorn
+    
+    # 优先获取 Zeabur 动态分配的环境变量 PORT
+    port = int(os.environ.get("PORT", sys.argv[1] if len(sys.argv) > 1 else 8877))
     app = mcp.streamable_http_app()
-    uvicorn.run(app, host="127.0.0.1", port=port)
+    
+    # 必须绑定到 0.0.0.0 才能接收来自外部的请求
+    uvicorn.run(app, host="0.0.0.0", port=port)
